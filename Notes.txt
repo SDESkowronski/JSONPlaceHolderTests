@@ -1,0 +1,10 @@
+Bugs Found in API
+Find By userId or id should return a 404 Not Found error instead it returns 200 OK and empty data
+
+References Used:
+http://zetcode.com/csharp/httpclient/
+https://docs.microsoft.com/en-us/dotnet/api/microsoft.visualstudio.testtools.unittesting.assert?view=mstest-net-1.2.0
+https://docs.microsoft.com/en-us/dotnet/api/microsoft.visualstudio.testtools.unittesting.collectionassert?view=mstest-net-1.2.0
+https://www.stevejgordon.co.uk/sending-and-receiving-json-using-httpclient-with-system-net-http-json
+https://www.automatetheplanet.com/mstest-cheat-sheet/
+
