@@ -1,9 +1,9 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -16,14 +16,7 @@ namespace JsonPlaceHolderTests
     {
         static readonly HttpClient httpClient = new HttpClient();
 
-        //private TestContext testContextInstance;
-        //public TestContext TestContext
-        //{
-        //    get { return testContextInstance; }
-        //    set { testContextInstance = value; }
-        //}
-
-        [TestMethod]
+        [TestMethod]    // Validates: GET https://jsonplaceholder.typicode.com/posts
         public async Task GetAllResources()
         {
             // The call to GetFromJsonAsync will verify that the response was a success response, and that the body was JSON. 
@@ -35,7 +28,7 @@ namespace JsonPlaceHolderTests
             // If the JSON conversion goes wrong you will get an error like this:
             // System.Text.Json.JsonException: The JSON value could not be converted to System.String. Path: $[0].userId | LineNumber: 2 | BytePositionInLine: 15. ---> System.InvalidOperationException: Cannot get the value of a token type 'Number' as a string.
             // If the JSON response has extra data that we were not expecting then we will not know that. From the test perspective we don't care.
-            List<PlaceHolder> placeHolders = await httpClient.GetFromJsonAsync<List<PlaceHolder>>("https://jsonplaceholder.typicode.com/posts");
+            List<PlaceHolder> placeHolders = await httpClient.GetFromJsonAsync<List<PlaceHolder>>(LogUriThatWillBeCalled("https://jsonplaceholder.typicode.com/posts"));
 
             // Uncomment to see what was returned.
             //placeHolders.ForEach(LogPlaceHolder);
@@ -45,7 +38,23 @@ namespace JsonPlaceHolderTests
             Helpers.AssertCollectionsAreEqual(Data.AllResources, placeHolders, "Failed to Validate All Resources");
         }
 
-        [DataTestMethod]
+        // Expected to fail due to the fact that this API never really creates a resource.
+        [TestMethod]    // Validates: POST https://jsonplaceholder.typicode.com/posts
+        public async Task CreateAResource()
+        {
+            var placeHolder = new PlaceHolder
+            {
+                UserId = 300,
+                Id = 101,
+                Title = "Mr. Superior",
+                Body = "Made of Steel"
+            };
+
+            using HttpResponseMessage postResponse = await httpClient.PostAsJsonAsync(LogUriThatWillBeCalled("https://jsonplaceholder.typicode.com/posts"), placeHolder);
+            await ValidateCreateOrUpdateAResouce(placeHolder, postResponse);
+        }
+
+        [DataTestMethod]    // Validates: GET https://jsonplaceholder.typicode.com/posts?userId={userId}
         [DataRow(1)]
         [DataRow(5)]
         [DataRow(10)]
@@ -68,7 +77,7 @@ namespace JsonPlaceHolderTests
 
                 if (exception == null)
                     throw new Exception($"Expecting a 404 Not Found Error Response for userId: {userId} instead we got a successful response.");
-                // I did validate this code by using this with this URL: "http://google.com/NotFound" since 
+                // I did validate this code by using this URL: "http://google.com/NotFound" since 
                 // the real API under test does not respond with a 404 Not Found response.
                 else if (!exception.Message.Contains("Not Found", StringComparison.OrdinalIgnoreCase))
                     throw exception;
@@ -79,7 +88,7 @@ namespace JsonPlaceHolderTests
 
         // I've kept this one simple since I already demonstrated how I would handle expected failures in the
         // previous GetResourceByUserId test method.
-        [DataTestMethod]
+        [DataTestMethod]    // Validates: GET https://jsonplaceholder.typicode.com/posts?id={id}
         [DataRow(0)]
         [DataRow(3)]    
         [DataRow(23)]
@@ -88,36 +97,37 @@ namespace JsonPlaceHolderTests
             GetResourceByIdThenValidate(id);
         }
 
-        // Expected to fail due to the fact that this API never really creates a resource.
-        [TestMethod]
-        public async Task CreateAResource()
-        {
-            var placeHolder = new PlaceHolder 
-            { 
-                UserId = 300,
-                Id = 101,
-                Title = "Mr. Superior",
-                Body = "Made of Steel"
-            };
-
-            using HttpResponseMessage postResponse = await httpClient.PostAsJsonAsync("https://jsonplaceholder.typicode.com/posts", placeHolder);
-            await ValidateCreateOrUpdateAResouce(placeHolder, postResponse);
-        }
-
-        // Expected to fail due to the fact that this API never really updates a resource.
-        [TestMethod]
-        public async Task UpdateAResource()
+        [DataTestMethod]    // Validates: PUT https://jsonplaceholder.typicode.com/posts/{id}
+        [DataRow(101)]      // This one will fail with an internal server error. I did not code for expecting the error since it really is a an error in the API that should be fixed.
+        [DataRow(7)]        // Expected to fail due to the fact that this API never really updates a resource.
+        [DataRow(15, true)] // Expected to fail due to the fact that this API never really updates a resource.
+        [DataRow(25, false, true)]  // Expected to fail due to the fact that this API never really updates a resource.
+        [DataRow(15, true, true)]   // Expected to fail due to the fact that this API never really updates a resource.
+        public async Task UpdateAResource(int id, bool largeTitle = false, bool largeBody = false)
         {
             var placeHolder = new PlaceHolder
             {
                 UserId = 300,
-                Id = 7,
+                Id = id,
                 Title = "Mrs. Potter",
                 Body = "An author"
             };
 
-            using HttpResponseMessage putResponse = await httpClient.PutAsJsonAsync("https://jsonplaceholder.typicode.com/posts/7", placeHolder);
+            if (largeTitle) placeHolder.Title = string.Concat(Enumerable.Repeat(placeHolder.Title, 50));
+            if (largeBody) placeHolder.Body = string.Concat(Enumerable.Repeat(placeHolder.Body, 1000));
+
+            using HttpResponseMessage putResponse = await httpClient.PutAsJsonAsync(LogUriThatWillBeCalled($"https://jsonplaceholder.typicode.com/posts/{id}"), placeHolder);
             await ValidateCreateOrUpdateAResouce(placeHolder, putResponse);
+        }
+
+        private string LogUriThatWillBeCalled(string uri)
+        {
+            Console.WriteLine($"API Endpoint that will be called: {uri}");
+            return uri;
+        }
+        private void LogPlaceHolder(PlaceHolder placeHolder)
+        {
+            Console.WriteLine($"userId: {placeHolder.UserId}\nid: {placeHolder.Id}\ntitle: {placeHolder.Title}\nbody: {placeHolder.Body}\n\n");
         }
 
         private async Task ValidateCreateOrUpdateAResouce(PlaceHolder placeHolder, HttpResponseMessage response)
@@ -128,15 +138,11 @@ namespace JsonPlaceHolderTests
             Assert.AreEqual(placeHolder, placeHolderResponse, "Not the response we were execting.");
 
             List<PlaceHolder> expectedPlaceHolders = new List<PlaceHolder>();
+            Console.WriteLine("Place Holders found by the API ------------------");
             expectedPlaceHolders.Add(placeHolder);
 
             Console.WriteLine("This test is expected to fail here due to the fact that these APIs never modify the underlying data.");
             GetResourceByIdThenValidate(placeHolder.Id, expectedPlaceHolders);
-        }
-
-        private void LogPlaceHolder(PlaceHolder placeHolder)
-        {
-            Console.WriteLine($"userId: {placeHolder.UserId}\nid: {placeHolder.Id}\ntitle: {placeHolder.Title}\nbody: {placeHolder.Body}\n\n");
         }
 
         private void GetResourceByUserIdThenValidate(int userId, List<PlaceHolder> expectedPlaceHolders = null)
@@ -151,7 +157,7 @@ namespace JsonPlaceHolderTests
 
         private void GetResourceThenValidate(string uri, List<PlaceHolder> expectedPlaceHolders, Func<List<PlaceHolder>> getExpectedPlaceHolders)
         {
-            using Task<HttpResponseMessage> responseTask = httpClient.GetAsync(uri);
+            using Task<HttpResponseMessage> responseTask = httpClient.GetAsync(LogUriThatWillBeCalled(uri));
 
             // Yield the processor so that the GetAsync will execute, then it will yield while waiting for the response from the server.
             Thread.Sleep(0);
@@ -162,6 +168,9 @@ namespace JsonPlaceHolderTests
             // to justify the extra complexity we are adding to the code by writing it this way.
             if (expectedPlaceHolders == null)
                 expectedPlaceHolders = getExpectedPlaceHolders();
+            
+            Console.WriteLine("Expected Place Holders that Should be Found --------------");
+            expectedPlaceHolders.ForEach(LogPlaceHolder);
 
             // Now we will wait for the response and get it once it is available.
             responseTask.Wait();
@@ -172,6 +181,7 @@ namespace JsonPlaceHolderTests
             using Task<List<PlaceHolder>> placeHoldersTask = response.Content.ReadFromJsonAsync<List<PlaceHolder>>();
             placeHoldersTask.Wait();
             List<PlaceHolder> actualPlaceHolders = placeHoldersTask.Result;
+            Console.WriteLine("Actual Place Holders Found --------------");
             actualPlaceHolders.ForEach(LogPlaceHolder);
 
             Helpers.AssertCollectionsAreEqual(expectedPlaceHolders, actualPlaceHolders, "Data returned from the server is not what we are expecting");
