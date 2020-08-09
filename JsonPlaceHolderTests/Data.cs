@@ -1,13 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace JsonPlaceHolderTests
 {
     static public class Data 
     {
-        static public PlaceHolder[] AllResourcesArray = new PlaceHolder[]
+        static public PlaceHolder[] AllResources = new PlaceHolder[]
         {
             new PlaceHolder {
                 UserId = 1,
@@ -610,8 +608,6 @@ namespace JsonPlaceHolderTests
                 Body = "cupiditate quo est a modi nesciunt soluta\nipsa voluptas error itaque dicta in\nautem qui minus magnam et distinctio eum\naccusamus ratione error aut"
             }
         };
-        static public PlaceHolder[] AllResources = AllResourcesArray;
-        //static public List<PlaceHolder> AllResources = AllResourcesArray.ToList();
 
         
         static public List<PlaceHolder> GetByUserId(int userId)
