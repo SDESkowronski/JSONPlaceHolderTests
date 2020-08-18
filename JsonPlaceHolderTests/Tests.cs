@@ -164,6 +164,7 @@ namespace JsonPlaceHolderTests
 
         private void ValidateResourceContainsExpectedData(string uri, List<PlaceHolder> expectedPlaceHolders, Func<List<PlaceHolder>> getExpectedPlaceHolders)
         {
+            DateTime dtStartTime = DateTime.Now;
             using Task<HttpResponseMessage> responseTask = httpClient.GetAsync(LogUriThatWillBeCalled(uri));
 
             // Yield the processor so that the GetAsync will execute, then it will yield while waiting for the response from the server.
@@ -181,6 +182,11 @@ namespace JsonPlaceHolderTests
 
             // Now we will wait for the response and get it once it is available.
             responseTask.Wait();
+
+            DateTime dtEndTime = DateTime.Now;
+            TimeSpan elapsedTime = dtEndTime.Subtract(dtStartTime);
+            Assert.IsTrue(elapsedTime.TotalMilliseconds < 1, $"Elapsed time of {elapsedTime.TotalMilliseconds}ms exceeded 1000ms for call to URI {uri}");
+
             using HttpResponseMessage response = responseTask.Result;
 
             response.EnsureSuccessStatusCode();

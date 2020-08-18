@@ -31,7 +31,7 @@ under test.
 
 Problems with the API Set used for this Exercise:
 ---------------------------------------------------------------------------
-This API set is to simplistic, there are not a lot of ways to vary the inputs so as to come up with many interesting scenarios to
+This API set is too simplistic, there are not a lot of ways to vary the inputs so as to come up with many interesting scenarios to
 exercise. It is also not documented well enough to establish what the contracts for each of endpoints are, so you tend to accept
 whatever you discover as the expected result.
 
